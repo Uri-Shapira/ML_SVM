@@ -1,9 +1,9 @@
-from numpy import count_nonzero, logical_and, logical_or, concatenate, mean, array_split, poly1d, polyfit, array
+from numpy import count_nonzero, logical_and, logical_or, concatenate, mean, array_split, poly1d, polyfit, array, sum
 from numpy.random import permutation
 import pandas as pd
 from sklearn.svm import SVC
 import matplotlib.pyplot as plt
-
+from sklearn.model_selection import train_test_split 
 
 SVM_DEFAULT_DEGREE = 3
 SVM_DEFAULT_GAMMA = 'auto'
@@ -20,7 +20,7 @@ def prepare_data(data, labels, max_count=None, train_ratio=0.8):
     :return: train_data: a numpy array with the features dataset - for train
              train_labels: a numpy array with the labels - for train
              test_data: a numpy array with the features dataset - for test
-             test_labels: a numpy array with the features dataset - for test
+             test_labels: a numpy array with the labels - for test
     """
     if max_count:
         data = data[:max_count]
@@ -34,7 +34,8 @@ def prepare_data(data, labels, max_count=None, train_ratio=0.8):
     ###########################################################################
     # TODO: Implement the function                                            #
     ###########################################################################
-    pass
+    train_data, train_labels, test_data, test_labels = train_test_split(data, labels, test_size = 0.20)  
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -50,19 +51,31 @@ def get_stats(prediction, labels):
              fpr: false positive rate
              accuracy: accuracy of the model given the predictions
     """
-
     tpr = 0.0
     fpr = 0.0
     accuracy = 0.0
-
     ###########################################################################
     # TODO: Implement the function                                            #
     ###########################################################################
-    pass
-    ###########################################################################
+    sample_size = len(prediction)
+    actual_negative = sum(labels==0)
+    actual_positive = sum(labels==1)
+    for i in range(sample_size):
+        if labels[i] == 1:
+            if prediction[i] == 1:
+                tpr += 1
+                accuracy += 1
+        else:
+            if prediction[i] == 0:
+                accuracy += 1
+            else:
+                fpr += 1
+    fpr /= actual_negative
+    tpr /= actual_positive
+    accuracy /= sample_size
+    ###########################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
-
     return tpr, fpr, accuracy
 
 
