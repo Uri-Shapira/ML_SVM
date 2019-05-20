@@ -1,9 +1,13 @@
-from numpy import count_nonzero, logical_and, logical_or, concatenate, mean, array_split, poly1d, polyfit, array, sum
+#TODO: 
+# 1. Get rid of sklearn.model import // check if it's ok
+# 2. check added imports sum, delete, concatenate...
+
+from numpy import count_nonzero, logical_and, logical_or, concatenate, mean, array_split, poly1d, polyfit, array, sum, delete
 from numpy.random import permutation
 import pandas as pd
 from sklearn.svm import SVC
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split 
+from sklearn.model_selection import train_test_split, KFold 
 
 SVM_DEFAULT_DEGREE = 3
 SVM_DEFAULT_GAMMA = 'auto'
@@ -93,7 +97,18 @@ def get_k_fold_stats(folds_array, labels_array, clf):
     ###########################################################################
     # TODO: Implement the function                                            #
     ###########################################################################
-    pass
+    for i in range(len(folds_array)):
+        predictions = []
+        train_data = concatenate(delete(folds_array,i,0))
+        train_labels = concatenate(delete(labels_array,i,0))
+        clf.fit(train_data, train_labels)
+        for row in folds_array[i]:
+            predict = clf.predict([row])
+            predictions.append(predict)
+        _tpr, _fpr, _accuracy = get_stats(predictions, labels_array[i])
+        tpr.append(_tpr)
+        fpr.append(_fpr)
+        accuracy.append(_accuracy)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -124,7 +139,26 @@ def compare_svms(data_array,
     ###########################################################################
     # TODO: Implement the function                                            #
     ###########################################################################
-    pass
+    folds_array = np.split(data_array, folds_count)
+    labels_array = np.split(labels_array, folds_count)
+    tpr = []
+    fpr = []
+    accuracy = []
+#     values = 
+    for i in range(len(kernel_list)):
+        if kernel_list[i] == 'poly':
+            clf = SVC(kernel=kernel_list[i], degree=kernel_params.values()[i])
+        else:
+            clf = SVC(kernel=kernel_list[i], gamma=kernel_params[i].values()[i])
+        _tpr, _fpr, _accuracy = get_k_fold_stats(folds_array, labels_array, clf)
+        tpr.append(_tpr)
+        fpr.append(_fpr)
+        accuracy.append(_accuracy)
+    svm_df['tpr'] = tpr
+    svm_df['fpr'] = fpr
+    svm_df['accuracy'] = accuracy
+       
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
