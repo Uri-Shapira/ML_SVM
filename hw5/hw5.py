@@ -1,13 +1,14 @@
 #TODO: 
 # 1. Get rid of sklearn.model import // check if it's ok
 # 2. check added imports sum, delete, pi...
+# 3. added "kernel" input to evalute c - check that it's ok
 
-from numpy import count_nonzero, logical_and, logical_or, concatenate, mean, array_split, poly1d, polyfit, array, sum, delete, pi, linspace
+from numpy import count_nonzero, logical_and, logical_or, concatenate, mean, array_split, poly1d, polyfit, array, sum, delete, pi, linspace, power
 from numpy.random import permutation
 import pandas as pd
 from sklearn.svm import SVC
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split, KFold 
+from sklearn.model_selection import KFold 
 
 SVM_DEFAULT_DEGREE = 3
 SVM_DEFAULT_GAMMA = 'auto'
@@ -37,7 +38,12 @@ def prepare_data(data, labels, max_count=None, train_ratio=0.8):
     ###########################################################################
     # TODO: Implement the function                                            #
     ###########################################################################
-    train_data, test_data, train_labels, test_labels = train_test_split(data, labels, test_size = 0.20)  
+    shuffled = permutation(len(data))
+    data = data[shuffled]
+    labels = labels[shuffled]
+    train_index = int(0.8 * len(data))
+    train_data, test_data = data[:train_index], data[train_index:]
+    train_labels, test_labels = labels[:train_index], labels[train_index:]
     
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -62,25 +68,24 @@ def get_stats(prediction, labels):
     ###########################################################################
     sample_size = len(prediction)
     tp = 0
+    fn = 0
+    tn = 0
     fp = 0
-    p = 0
-    n= 0 
     for i in range(sample_size):
-        if labels[i] == 1:
-            p += 1
-            if prediction[i] == 1:
+        if prediction[i] == 1:
+            if labels[i] == 1:
+                accuracy += 1
                 tp += 1
-                accuracy += 1
-        else:
-            n += 1
-            if prediction[i] == 1:
-                fp += 1
             else:
+                fn += 1
+        else:
+            if labels[i] == 0:
                 accuracy += 1
-    fpr = fp / n
-    tpr = tp / p
-    print("false positive", fpr)
-    print("true positive", tpr)
+                tn += 1
+            else:
+                fp += 1        
+    fpr = fn / (fn + tn)
+    tpr = tp / (tp + fp)
     accuracy /= sample_size
     ###########################################################
     #                             END OF YOUR CODE                            #
@@ -123,7 +128,8 @@ def get_k_fold_stats(folds_array, labels_array, clf):
 def compare_svms(data_array,
                  labels_array,
                  folds_count,
-                 kernels_list=('poly', 'poly', 'poly', 'rbf', 'rbf', 'rbf',),
+                 kernels_list=('poly', 'poly',
+                               'poly', 'rbf', 'rbf', 'rbf',),
                  kernel_params=({'degree': 2}, {'degree': 3}, {'degree': 4}, {'gamma': 0.005}, {'gamma': 0.05}, {'gamma': 0.5},)):
     """
     :param data_array: a numpy array with the features dataset
@@ -214,13 +220,13 @@ def plot_roc_curve_with_score(df, alpha_slope=1.5):
     area = pi*20
     colors = ["Red", "Green" , "Blue", "Black", "Yellow", "Orange"]
     names = ["poly deg 2", "poly deg 3", "poly deg 4", "RBF gamma 0.005", "RBF gamma 0.05", "RBF gamma 0.5"]
+    print("fpr   tpr")
     for i in range(0,6):
-        print(x[i], y[i])
         plt.scatter(x[i], y[i], area, color=colors[i], alpha=0.5, label=names[i])
     plt.ylabel('TPR')
     plt.xlabel('FPR')
     plt.plot(a,f,'-r',label="alpha_slope line")
-    plt.axis([0,1.2,0,2])
+    plt.axis([0,1.2,0.8,1.4])
     plt.legend()
     plt.show()
     ###########################################################################
@@ -228,19 +234,42 @@ def plot_roc_curve_with_score(df, alpha_slope=1.5):
     ###########################################################################
 
 
-def evaluate_c_param(data_array, labels_array, folds_count, best_kernel_params):
+def evaluate_c_param(data_array, labels_array, folds_count, kernel_type, best_kernel_params):
     """
     :param data_array: a numpy array with the features dataset
     :param labels_array: a numpy array with the labels
     :param folds_count: number of cross-validation folds
     :return: res: a dataframe containing the results for the different c values. columns similar to `compare_svms`
     """
-
     res = pd.DataFrame()
     ###########################################################################
     # TODO: Implement the function                                            #
     ###########################################################################
-    pass
+    res['c values'] = None
+    res['tpr'] = None
+    res['fpr'] = None
+    res['accuracy'] = None
+    c_values = []
+    for i in range(-4,1):
+        for j in range(1,3):
+            c = power(10.0,i) * (j/3)
+            c_values.append(c)
+    res['c values'] = c_values
+    folds_array = array_split(data_array, folds_count)
+    labels_array = array_split(labels_array, folds_count)
+    tpr = []
+    fpr = []
+    accuracy = []
+    for c_value in res['c values']:
+        clf = SVC(C=c_value, kernel=kernel_type)
+        clf.set_params(**best_kernel_params)
+        _tpr, _fpr, _accuracy = get_k_fold_stats(folds_array, labels_array, clf)
+        tpr.append(_tpr)
+        fpr.append(_fpr)
+        accuracy.append(_accuracy)
+    res['tpr'] = tpr
+    res['fpr'] = fpr
+    res['accuracy'] = accuracy           
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
