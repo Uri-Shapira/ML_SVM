@@ -1,8 +1,8 @@
 #TODO: 
 # 1. Get rid of sklearn.model import // check if it's ok
-# 2. check added imports sum, delete, concatenate...
+# 2. check added imports sum, delete, pi...
 
-from numpy import count_nonzero, logical_and, logical_or, concatenate, mean, array_split, poly1d, polyfit, array, sum, delete
+from numpy import count_nonzero, logical_and, logical_or, concatenate, mean, array_split, poly1d, polyfit, array, sum, delete, pi, linspace
 from numpy.random import permutation
 import pandas as pd
 from sklearn.svm import SVC
@@ -29,7 +29,6 @@ def prepare_data(data, labels, max_count=None, train_ratio=0.8):
     if max_count:
         data = data[:max_count]
         labels = labels[:max_count]
-
     train_data = array([])
     train_labels = array([])
     test_data = array([])
@@ -38,7 +37,7 @@ def prepare_data(data, labels, max_count=None, train_ratio=0.8):
     ###########################################################################
     # TODO: Implement the function                                            #
     ###########################################################################
-    train_data, train_labels, test_data, test_labels = train_test_split(data, labels, test_size = 0.20)  
+    train_data, test_data, train_labels, test_labels = train_test_split(data, labels, test_size = 0.20)  
     
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -62,20 +61,26 @@ def get_stats(prediction, labels):
     # TODO: Implement the function                                            #
     ###########################################################################
     sample_size = len(prediction)
-    actual_negative = sum(labels==0)
-    actual_positive = sum(labels==1)
+    tp = 0
+    fp = 0
+    p = 0
+    n= 0 
     for i in range(sample_size):
         if labels[i] == 1:
+            p += 1
             if prediction[i] == 1:
-                tpr += 1
+                tp += 1
                 accuracy += 1
         else:
-            if prediction[i] == 0:
-                accuracy += 1
+            n += 1
+            if prediction[i] == 1:
+                fp += 1
             else:
-                fpr += 1
-    fpr /= actual_negative
-    tpr /= actual_positive
+                accuracy += 1
+    fpr = fp / n
+    tpr = tp / p
+    print("false positive", fpr)
+    print("true positive", tpr)
     accuracy /= sample_size
     ###########################################################
     #                             END OF YOUR CODE                            #
@@ -99,11 +104,11 @@ def get_k_fold_stats(folds_array, labels_array, clf):
     ###########################################################################
     for i in range(len(folds_array)):
         predictions = []
-        train_data = concatenate(delete(folds_array,i,0))
-        train_labels = concatenate(delete(labels_array,i,0))
-        clf.fit(train_data, train_labels)
+        tr_data = concatenate(delete(folds_array,i,0))
+        tr_labels = concatenate(delete(labels_array,i,0))
+        clf.fit(tr_data, tr_labels)
         for row in folds_array[i]:
-            predict = clf.predict([row])
+            predict = clf.predict(row.reshape(1, -1))
             predictions.append(predict)
         _tpr, _fpr, _accuracy = get_stats(predictions, labels_array[i])
         tpr.append(_tpr)
@@ -112,7 +117,6 @@ def get_k_fold_stats(folds_array, labels_array, clf):
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
-
     return mean(tpr), mean(fpr), mean(accuracy)
 
 
@@ -139,46 +143,55 @@ def compare_svms(data_array,
     ###########################################################################
     # TODO: Implement the function                                            #
     ###########################################################################
-    folds_array = np.split(data_array, folds_count)
-    labels_array = np.split(labels_array, folds_count)
+    folds_array = array_split(data_array, folds_count)
+    labels_array = array_split(labels_array, folds_count)
     tpr = []
     fpr = []
     accuracy = []
-#     values = 
-    for i in range(len(kernel_list)):
-        if kernel_list[i] == 'poly':
-            clf = SVC(kernel=kernel_list[i], degree=kernel_params.values()[i])
-        else:
-            clf = SVC(kernel=kernel_list[i], gamma=kernel_params[i].values()[i])
+    for i in range(len(kernels_list)):
+        clf = SVC(kernel=kernels_list[i])
+        clf.set_params(**kernel_params[i])
         _tpr, _fpr, _accuracy = get_k_fold_stats(folds_array, labels_array, clf)
         tpr.append(_tpr)
         fpr.append(_fpr)
         accuracy.append(_accuracy)
     svm_df['tpr'] = tpr
     svm_df['fpr'] = fpr
-    svm_df['accuracy'] = accuracy
-       
-    
+    svm_df['accuracy'] = accuracy  
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
-
     return svm_df
 
 
-def get_most_accurate_kernel():
+def get_most_accurate_kernel(accuracies):
     """
     :return: integer representing the row number of the most accurate kernel
     """
+    
     best_kernel = 0
+    best_accuracy = 0
+    index = 0
+    for accuracy in accuracies:
+        if accuracy > best_accuracy:
+            best_accuracy = accuracy
+            best_kernel = index
+        index += 1
     return best_kernel
 
 
-def get_kernel_with_highest_score():
+def get_kernel_with_highest_score(scores):
     """
     :return: integer representing the row number of the kernel with the highest score
     """
     best_kernel = 0
+    best_score = 0
+    index = 0
+    for score in scores:
+        if score > best_score:
+            best_score = score
+            best_kernel = index
+        index += 1
     return best_kernel
 
 
@@ -194,13 +207,28 @@ def plot_roc_curve_with_score(df, alpha_slope=1.5):
     ###########################################################################
     # TODO: Implement the function                                            #
     ###########################################################################
-    pass
+    a = linspace(0,1,100)
+    b = y[5] - x[5]*alpha_slope
+    f = alpha_slope*a + b
+    plt.title('FPR Vs. TPR')
+    area = pi*20
+    colors = ["Red", "Green" , "Blue", "Black", "Yellow", "Orange"]
+    names = ["poly deg 2", "poly deg 3", "poly deg 4", "RBF gamma 0.005", "RBF gamma 0.05", "RBF gamma 0.5"]
+    for i in range(0,6):
+        print(x[i], y[i])
+        plt.scatter(x[i], y[i], area, color=colors[i], alpha=0.5, label=names[i])
+    plt.ylabel('TPR')
+    plt.xlabel('FPR')
+    plt.plot(a,f,'-r',label="alpha_slope line")
+    plt.axis([0,1.2,0,2])
+    plt.legend()
+    plt.show()
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
 
 
-def evaluate_c_param(data_array, labels_array, folds_count):
+def evaluate_c_param(data_array, labels_array, folds_count, best_kernel_params):
     """
     :param data_array: a numpy array with the features dataset
     :param labels_array: a numpy array with the labels
@@ -219,7 +247,7 @@ def evaluate_c_param(data_array, labels_array, folds_count):
     return res
 
 
-def get_test_set_performance(train_data, train_labels, test_data, test_labels):
+def get_test_set_performance(train_data, train_labels, test_data, test_labels, best_kernel_params):
     """
     :param train_data: a numpy array with the features dataset - train
     :param train_labels: a numpy array with the labels - train
