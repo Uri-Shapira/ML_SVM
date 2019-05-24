@@ -1,7 +1,7 @@
 #TODO: 
 # 1. Get rid of sklearn.model import // check if it's ok
 # 2. check added imports sum, delete, pi...
-# 3. added "kernel" input to evalute c - check that it's ok
+# 3. added "kernel" input to evalute c and test set - check that it's ok
 
 from numpy import count_nonzero, logical_and, logical_or, concatenate, mean, array_split, poly1d, polyfit, array, sum, delete, pi, linspace, power
 from numpy.random import permutation
@@ -245,7 +245,7 @@ def evaluate_c_param(data_array, labels_array, folds_count, kernel_type, best_ke
     ###########################################################################
     # TODO: Implement the function                                            #
     ###########################################################################
-    res['c values'] = None
+    res['c_values'] = None
     res['tpr'] = None
     res['fpr'] = None
     res['accuracy'] = None
@@ -254,13 +254,13 @@ def evaluate_c_param(data_array, labels_array, folds_count, kernel_type, best_ke
         for j in range(1,3):
             c = power(10.0,i) * (j/3)
             c_values.append(c)
-    res['c values'] = c_values
+    res['c_values'] = c_values
     folds_array = array_split(data_array, folds_count)
     labels_array = array_split(labels_array, folds_count)
     tpr = []
     fpr = []
     accuracy = []
-    for c_value in res['c values']:
+    for c_value in res['c_values']:
         clf = SVC(C=c_value, kernel=kernel_type)
         clf.set_params(**best_kernel_params)
         _tpr, _fpr, _accuracy = get_k_fold_stats(folds_array, labels_array, clf)
@@ -276,7 +276,7 @@ def evaluate_c_param(data_array, labels_array, folds_count, kernel_type, best_ke
     return res
 
 
-def get_test_set_performance(train_data, train_labels, test_data, test_labels, best_kernel_params):
+def get_test_set_performance(train_data, train_labels, test_data, test_labels, best_kernel_params, kernel_type):
     """
     :param train_data: a numpy array with the features dataset - train
     :param train_labels: a numpy array with the labels - train
@@ -291,9 +291,10 @@ def get_test_set_performance(train_data, train_labels, test_data, test_labels, b
              accuracy: accuracy of the model on the test dataset
     """
 
-    kernel_type = ''
-    kernel_params = None
-    clf = SVC(class_weight='balanced')  # TODO: set the right kernel
+    clf = SVC(kernel=kernel_type, class_weight='balanced', C=0.666667)  # TODO: set the right kernel
+    clf.set_params(**best_kernel_params)
+    clf.fit(train_data, train_labels)
+  
     tpr = 0.0
     fpr = 0.0
     accuracy = 0.0
@@ -301,9 +302,13 @@ def get_test_set_performance(train_data, train_labels, test_data, test_labels, b
     ###########################################################################
     # TODO: Implement the function                                            #
     ###########################################################################
-    pass
+    predictions = []
+    for row in test_data:
+        predict = clf.predict(row.reshape(1, -1))
+        predictions.append(predict)
+    tpr, fpr, accuracy = get_stats(predictions, test_labels)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
 
-    return kernel_type, kernel_params, clf, tpr, fpr, accuracy
+    return kernel_type, best_kernel_params, clf, tpr, fpr, accuracy
