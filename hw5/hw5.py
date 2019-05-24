@@ -2,6 +2,7 @@
 # 1. Get rid of sklearn.model import // check if it's ok
 # 2. check added imports sum, delete, pi...
 # 3. added "kernel" input to evalute c and test set - check that it's ok
+# 4. return values of get-test-set performance (unnecessary params / kernel type)
 
 from numpy import count_nonzero, logical_and, logical_or, concatenate, mean, array_split, poly1d, polyfit, array, sum, delete, pi, linspace, power
 from numpy.random import permutation
@@ -291,7 +292,7 @@ def get_test_set_performance(train_data, train_labels, test_data, test_labels, b
              accuracy: accuracy of the model on the test dataset
     """
 
-    clf = SVC(kernel=kernel_type, class_weight='balanced', C=0.666667)  # TODO: set the right kernel
+    clf = SVC(kernel=kernel_type, class_weight='balanced')  # TODO: set the right kernel
     clf.set_params(**best_kernel_params)
     clf.fit(train_data, train_labels)
   
